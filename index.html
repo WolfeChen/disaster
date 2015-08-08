@@ -135,7 +135,7 @@ require([
                        "type" : summary[i].Name[0],
                        "desc" : summary[i].CaseDescription[0],
                        "fix" : summary[i].CaseComplete[0] }; 
-          var info = new InfoTemplate('${addr}', 'Case Type嚗�${type}<br>Case Description嚗�${desc}<br>');
+          var info = new InfoTemplate('${addr}', 'Case Type:${type}<br>Case Description:${desc}<br>');
           var point = new Point(summary[i].Wgs84X[0], summary[i].Wgs84Y[0], new SpatialReference({wkid:4326}));
           if (summary[i].CaseComplete[0] == "true") 
             graphicsLayer.add(new Graphic(point, green_symbol, attr, info));
