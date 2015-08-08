@@ -1,9 +1,158 @@
-<!doctype html>
+
+
+<!DOCTYPE html>
 <html>
-  <head>
-    <title>災害資訊查詢</title>
-  </head>
-  <body>
-    拜託不要來！
-  </body>
+<head id="Head1"><title>
+  EOC Disaster Map
+</title>   
+  <script type="text/javascript" src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.js'></script>
+    <link rel="stylesheet" href="http://js.arcgis.com/3.13/esri/css/esri.css">
+    <script type="text/javascript" src="http://js.arcgis.com/3.13"></script>
+	
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      body, input
+      {
+        font-size: 9pt;
+      }
+      html
+      {
+        height: 100%;
+      }
+      body
+      {
+        height: 100%;
+        margin: 0px;
+        padding: 0px;
+      }
+      #map
+      {
+        height: 100%;
+      }
+      #citationInfo {
+        position:absolute; 
+	color:black;
+	font-weight:bold;
+	font-size:12pt;
+	left:10px;
+	bottom:10px;
+	z-Index:999;
+      }
+    </style>
+<script type="text/javascript">
+require([
+  "dojo/on",
+  "esri/map", 
+  "esri/geometry/Point", 
+  "esri/graphic",
+  "esri/layers/GraphicsLayer",
+  "esri/SpatialReference",
+  "esri/layers/WMTSLayer", 
+  "esri/layers/WMTSLayerInfo", 
+  "esri/layers/ArcGISDynamicMapServiceLayer",
+  "esri/symbols/PictureMarkerSymbol",
+  "esri/symbols/SimpleMarkerSymbol",
+  "esri/symbols/TextSymbol",
+  "esri/InfoTemplate",
+  "esri/Color",
+  "esri/symbols/Font",
+  "dojo/domReady!"
+], function(
+  on,
+  Map, 
+  Point, 
+  Graphic,
+  GraphicsLayer,
+  SpatialReference,
+  WMTSLayer, 
+  WMTSLayerInfo, 
+  ArcGISDynamicMapServiceLayer,
+  PictureMarkerSymbol,
+  SimpleMarkerSymbol,
+  TextSymbol,
+  InfoTemplate,
+  Color,
+  Font
+) {
+  var map, graphic, graphicsLayer, wmtsLayer, dynamicMapServiceLayer;
+
+  //proxy
+  esriConfig.defaults.io.proxyUrl = "http://163.29.157.40/proxy/proxy.ashx";
+
+  // 13532402, 2880352
+  //var center_point = new Point(13532402, 2880352 , new SpatialReference({wkid:3857}));
+  var center_point = new Point(121.53285217285156, 25.042337417602539, new SpatialReference({wkid:4326}));
+	
+  map = new Map("map", {
+    center: center_point,
+    zoom: 15
+  });
+ 
+  var wmtsOptions = {
+    serviceMode: "KVP",
+    layerInfo: new WMTSLayerInfo({
+      identifier: "TAIPEI_MAP",
+      tileMatrixSet: "GoogleMapsCompatible",
+      format: "png"
+    })
+  };
+
+  wmtsLayer = new WMTSLayer("http://maps.taipei/wmts", wmtsOptions);
+  map.addLayer(wmtsLayer);
+
+  //dynamic layer
+  dynamicMapServiceLayer = new ArcGISDynamicMapServiceLayer(
+    "http://maps.taipei/arcgis/rest/services/Hosted/road_line_sde2/MapServer", {
+    "opacity": 0.5
+  });
+
+  //map.addLayer(dynamicMapServiceLayer);
+	
+  var graphicsLayer = new GraphicsLayer();
+
+  var red_icon = 'red-cross.png';
+  var red_symbol = new PictureMarkerSymbol(red_icon, 48, 48);
+
+  var green_icon = 'green-check.png';
+  var green_symbol = new PictureMarkerSymbol(green_icon, 24, 24);
+
+  function loadXMLDoc() {
+    var xmlhttp;
+    if (window.XMLHttpRequest) {
+      // code for IE7+, Firefox, Chrome, Opera, Safari
+      xmlhttp = new XMLHttpRequest();
+    } else {
+      // code for IE6, IE5
+      xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+    }
+    xmlhttp.onreadystatechange = function() {
+      if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+        var data = JSON.parse(xmlhttp.responseText);
+        var summary = data["DataSet"]["diffgr:diffgram"][0]["NewDataSet"][0]["CASE_SUMMARY"];
+
+        for (var i = 0; len = summary.length, i < len; i++) {
+          var attr = { "addr" : summary[i].CaseLocationDescription[0],
+                       "type" : summary[i].Name[0],
+                       "desc" : summary[i].CaseDescription[0],
+                       "fix" : summary[i].CaseComplete[0] }; 
+          var info = new InfoTemplate('${addr}', 'Case Type嚗�${type}<br>Case Description嚗�${desc}<br>');
+          var point = new Point(summary[i].Wgs84X[0], summary[i].Wgs84Y[0], new SpatialReference({wkid:4326}));
+          if (summary[i].CaseComplete[0] == "true") 
+            graphicsLayer.add(new Graphic(point, green_symbol, attr, info));
+          else
+            graphicsLayer.add(new Graphic(point, red_symbol, attr, info));    
+        } 
+      }
+    }
+    xmlhttp.open("GET","https://tcgbusfs.blob.core.windows.net/blobfs/GetDisasterSummary.json",true);
+    xmlhttp.send();
+  }
+  loadXMLDoc();
+  map.addLayer(graphicsLayer);
+});
+</script>
+</head>
+<body>
+  <div id="map" style="width: 100%; height: 100%"></div>
+</body>
 </html>
